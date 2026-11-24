@@ -11,14 +11,15 @@
 -- 1. The design was reduced to three entities (Artists, Albums, Songs) and one
 --    junction table (ArtistContributions); Genres, Users, Playlists, and
 --    PlaylistSongs were removed.
--- 2. Songs.genreID (foreign key to Genres) was replaced by a plain text
---    column Songs.genre, since Genres no longer exists as a table.
--- 3. A view, SongCatalog, is created in Statement 16 (no table changes).
+-- 2. The column Songs.genreID (a foreign key to Genres) was removed and
+--    replaced by a plain text column Songs.genre, since Genres no longer
+--    exists as a table.
+-- 3. A view, SongCatalog, is created in Statement 16.
 -- ============================================================================
 -- ============================================================================
 -- MEMBER CONTRIBUTIONS SUMMARY (GROUPED AT THE TOP)
 -- ============================================================================
--- Each statement sums to 100%. This project was completed by one team member.
+-- This project was completed by one person.
 --
 -- SECTION 1: SIMPLE STATEMENTS
 -- Statement 01: [Andrew Li]: 100%
@@ -48,32 +49,30 @@
 PRAGMA foreign_keys = ON;
 -- Set output format for readability during evaluation
 .headers on
-.mode column
 -- ============================================================================
--- SECTION 1: SIMPLE STATEMENTS
--- Focus: Single-table projections/filters, simple inserts/updates/deletes,
--- basic sorting, simple aggregate functions, and pattern matching.
+-- SECTION 1: SIMPLE STATEMENTS (Statements 1 to 6)
 -- ============================================================================
 -- ----------------------------------------------------------------------------
--- Statement 01: Songs Longer Than 4 Minutes
--- Explanation: Lists songs longer than 4 minutes (240 seconds), longest first.
+-- Statement 01: Long Songs Over Four Minutes
+-- Explanation: Retrieve the title, genre, and duration of all songs longer than
+-- 4 minutes (240 seconds), sorted from longest to shortest.
 -- ----------------------------------------------------------------------------
 SELECT title, genre, duration
 FROM Songs
 WHERE duration > 240
 ORDER BY duration DESC;
 -- ----------------------------------------------------------------------------
--- Statement 02: Artists Whose Names Start With "The"
--- Explanation: Uses pattern matching to find artists whose names start with
--- "The ".
+-- Statement 02: Artists Whose Names Start With "The" (Pattern Matching)
+-- Explanation: Find the name and country of all artists whose names begin with
+-- the word "The" using the LIKE operator with a wildcard.
 -- ----------------------------------------------------------------------------
 SELECT name, country
 FROM Artists
 WHERE name LIKE 'The %';
 -- ----------------------------------------------------------------------------
--- Statement 03: Song Count and Duration Statistics
--- Explanation: Computes scalar aggregates over all songs: the count, average,
--- shortest, and longest duration.
+-- Statement 03: Aggregate Song Duration Metrics
+-- Explanation: Compute the total number of songs in the catalog along with the
+-- average, shortest, and longest song duration in seconds.
 -- ----------------------------------------------------------------------------
 SELECT COUNT(*) AS totalSongs,
        ROUND(AVG(duration), 1) AS avgDurationSec,
@@ -81,33 +80,34 @@ SELECT COUNT(*) AS totalSongs,
        MAX(duration) AS longestSec
 FROM Songs;
 -- ----------------------------------------------------------------------------
--- Statement 04: Insert a New Artist
--- Explanation: Inserts a new artist into the catalog.
+-- Statement 04: Insert New Artist
+-- Explanation: Insert a new artist profile for Nas, including his country and
+-- debut year, into the Artists table.
 -- ----------------------------------------------------------------------------
 INSERT INTO Artists (artistID, name, country, debutYear)
 VALUES (12, 'Nas', 'USA', 1994);
 -- ----------------------------------------------------------------------------
--- Statement 05: Update the New Artist's Country
--- Explanation: Updates the country name of the newly inserted artist.
+-- Statement 05: Update Artist Country
+-- Explanation: Update the country of the newly inserted artist from the
+-- abbreviation "USA" to the full name "United States".
 -- ----------------------------------------------------------------------------
 UPDATE Artists
 SET country = 'United States'
 WHERE artistID = 12;
 -- ----------------------------------------------------------------------------
--- Statement 06: Delete the New Artist
--- Explanation: Deletes the new artist, who has no albums or song credits yet.
+-- Statement 06: Delete Newly Added Artist
+-- Explanation: Remove the newly inserted artist from the Artists table, since
+-- no albums or song credits reference him.
 -- ----------------------------------------------------------------------------
 DELETE FROM Artists
 WHERE artistID = 12;
 -- ============================================================================
--- SECTION 2: INTERMEDIATE STATEMENTS
--- Focus: Multi-table inner joins, left outer joins, aggregation with GROUP BY
--- and HAVING, scalar subqueries, table aliasing, and conditional updates.
+-- SECTION 2: INTERMEDIATE STATEMENTS (Statements 7 to 11)
 -- ============================================================================
 -- ----------------------------------------------------------------------------
--- Statement 07: Songs With Their Album and Artist
--- Explanation: Joins Songs, Albums, and Artists to show each song with its
--- album and main artist.
+-- Statement 07: Songs with Album and Artist Details (3-Table Inner Join)
+-- Explanation: Retrieve every song alongside the title of its album and the name
+-- of the artist who released that album, sorted by artist, album, and song title.
 -- ----------------------------------------------------------------------------
 SELECT s.title AS song, al.title AS album, ar.name AS artist
 FROM Songs s
@@ -115,9 +115,9 @@ JOIN Albums al ON s.albumID = al.albumID
 JOIN Artists ar ON al.artistID = ar.artistID
 ORDER BY ar.name, al.title, s.title;
 -- ----------------------------------------------------------------------------
--- Statement 08: Album Count per Artist
--- Explanation: Uses a LEFT JOIN to count albums per artist, including artists
--- with no albums.
+-- Statement 08: Album Count per Artist (LEFT OUTER JOIN)
+-- Explanation: Count the number of albums released by each artist, using a left
+-- outer join so that artists with no albums are still listed with a count of 0.
 -- ----------------------------------------------------------------------------
 SELECT a.name, COUNT(al.albumID) AS numAlbums
 FROM Artists a
@@ -125,9 +125,9 @@ LEFT JOIN Albums al ON a.artistID = al.artistID
 GROUP BY a.artistID, a.name
 ORDER BY numAlbums DESC, a.name;
 -- ----------------------------------------------------------------------------
--- Statement 09: Albums With 2 or More Songs
--- Explanation: Finds albums with 2 or more songs using GROUP BY and HAVING,
--- and reports each album's average song length.
+-- Statement 09: Albums with Multiple Songs (GROUP BY & HAVING)
+-- Explanation: Identify albums that contain at least 2 songs in the catalog and
+-- calculate the average song duration for each of those albums.
 -- ----------------------------------------------------------------------------
 SELECT al.title AS album, COUNT(*) AS numSongs, ROUND(AVG(s.duration), 1) AS avgDurationSec
 FROM Albums al
@@ -136,33 +136,29 @@ GROUP BY al.albumID, al.title
 HAVING COUNT(*) >= 2
 ORDER BY avgDurationSec DESC;
 -- ----------------------------------------------------------------------------
--- Statement 10: Songs Longer Than the Average
--- Explanation: Uses a scalar subquery to list songs longer than the average
--- song duration.
+-- Statement 10: Songs Longer Than the Catalog Average (Scalar Subquery)
+-- Explanation: Find all songs whose duration is strictly greater than the
+-- average duration of all songs, which is computed with a scalar subquery.
 -- ----------------------------------------------------------------------------
 SELECT title, duration
 FROM Songs
 WHERE duration > (SELECT AVG(duration) FROM Songs)
 ORDER BY duration DESC;
 -- ----------------------------------------------------------------------------
--- Statement 11: Spell Out "UK" (Conditional Update)
--- Explanation: Conditional update that changes "UK" to "United Kingdom" for
--- every artist from the UK.
+-- Statement 11: Standardize UK Country Names (Conditional Update)
+-- Explanation: Update the country value to "United Kingdom" for every artist
+-- whose country is currently recorded as "UK".
 -- ----------------------------------------------------------------------------
 UPDATE Artists
 SET country = 'United Kingdom'
 WHERE country = 'UK';
 -- ============================================================================
--- SECTION 3: COMPLEX STATEMENTS
--- Focus: Correlated subqueries (EXISTS/NOT EXISTS), set operations
--- (UNION, INTERSECT, EXCEPT), Common Table Expressions (WITH / CTEs),
--- window functions (ROW_NUMBER, DENSE_RANK), VIEW creation/querying,
--- multi-condition triggers, and complex analytics.
+-- SECTION 3: COMPLEX STATEMENTS (Statements 12 to 18)
 -- ============================================================================
 -- ----------------------------------------------------------------------------
--- Statement 12: Artists With No Albums (NOT EXISTS)
--- Explanation: Uses a correlated NOT EXISTS subquery to find artists who have
--- never released an album.
+-- Statement 12: Artists with No Albums (Correlated NOT EXISTS)
+-- Explanation: Find artists who have no matching row in the Albums table, which
+-- identifies featured-only artists who appear on songs without releasing an album.
 -- ----------------------------------------------------------------------------
 SELECT a.name
 FROM Artists a
@@ -170,18 +166,18 @@ WHERE NOT EXISTS (
     SELECT 1 FROM Albums al WHERE al.artistID = a.artistID
 );
 -- ----------------------------------------------------------------------------
--- Statement 13: Long or Electronic Songs (UNION)
--- Explanation: Uses UNION to list songs that are either very long (over 300
--- seconds) or Electronic, with no duplicates.
+-- Statement 13: Very Long or Electronic Songs (UNION)
+-- Explanation: Combine songs longer than 300 seconds with all Electronic songs
+-- into one list using the UNION operator, which removes duplicate rows.
 -- ----------------------------------------------------------------------------
 SELECT title, duration FROM Songs WHERE duration > 300
 UNION
 SELECT title, duration FROM Songs WHERE genre = 'Electronic'
 ORDER BY duration DESC;
 -- ----------------------------------------------------------------------------
--- Statement 14: Two Longest Songs per Genre (CTE and ROW_NUMBER)
--- Explanation: Uses a CTE with ROW_NUMBER to show the two longest songs in
--- each genre.
+-- Statement 14: Two Longest Songs per Genre (CTE & ROW_NUMBER)
+-- Explanation: Rank songs by duration within each genre using ROW_NUMBER() in a
+-- common table expression, then return only the top two songs from each genre.
 -- ----------------------------------------------------------------------------
 WITH ranked AS (
     SELECT genre, title, duration,
@@ -194,8 +190,9 @@ WHERE rn <= 2
 ORDER BY genre, rn;
 -- ----------------------------------------------------------------------------
 -- Statement 15: Artist Ranking by Song Credits (DENSE_RANK)
--- Explanation: Uses DENSE_RANK to rank artists by the number of songs they are
--- credited on in the many-to-many ArtistContributions table.
+-- Explanation: Rank artists by the number of songs they are credited on through
+-- the ArtistContributions junction table, giving tied artists the same rank
+-- with no gaps.
 -- ----------------------------------------------------------------------------
 SELECT a.name,
        COUNT(*) AS songsCredited,
@@ -205,10 +202,12 @@ JOIN ArtistContributions ac ON a.artistID = ac.artistID
 GROUP BY a.artistID, a.name
 ORDER BY creditRank, a.name;
 -- ----------------------------------------------------------------------------
--- Statement 16: Create the SongCatalog View
--- Explanation: Creates a view that joins each song to its album and main
--- artist so the join does not have to be rewritten.
+-- Statement 16: Create Song Catalog View (DDL View)
+-- Explanation: Create a view that joins Songs, Albums, and Artists so that each
+-- song is exposed with its genre, duration, album title, and artist name in
+-- one result.
 -- ----------------------------------------------------------------------------
+DROP VIEW IF EXISTS SongCatalog;
 CREATE VIEW SongCatalog AS
 SELECT s.songID, s.title AS song, s.genre, s.duration,
        al.title AS album, ar.name AS artist
@@ -216,18 +215,19 @@ FROM Songs s
 JOIN Albums al ON s.albumID = al.albumID
 JOIN Artists ar ON al.artistID = ar.artistID;
 -- ----------------------------------------------------------------------------
--- Statement 17: Query the SongCatalog View
--- Explanation: Queries the SongCatalog view for all Hip-Hop songs, ordered by
--- title.
+-- Statement 17: Query the Song Catalog View
+-- Explanation: Query the SongCatalog view to retrieve the song, album, and
+-- artist for all Hip-Hop songs, sorted by song title.
 -- ----------------------------------------------------------------------------
 SELECT song, album, artist
 FROM SongCatalog
 WHERE genre = 'Hip-Hop'
 ORDER BY song;
 -- ----------------------------------------------------------------------------
--- Statement 18: Song Length Categories (CASE)
--- Explanation: Uses a CASE expression to bucket songs into Short, Medium, and
--- Long and counts how many fall into each bucket.
+-- Statement 18: Song Length Categories (CASE Expression)
+-- Explanation: Classify each song as Short (under 200 seconds), Medium (200 to
+-- 280 seconds), or Long (over 280 seconds) using a CASE expression, then count
+-- the songs in each category.
 -- ----------------------------------------------------------------------------
 SELECT CASE
            WHEN duration < 200 THEN 'Short (under 200s)'
